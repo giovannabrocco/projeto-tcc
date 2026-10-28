@@ -2,6 +2,8 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateMembroDto } from './dto/create-membro.dto';
 import { UpdateMembroDto } from './dto/update-membro.dto';
 import { PrismaService } from 'src/global/prisma.service';
+import axios from 'axios';
+import { BrasilApiCepResponse } from 'src/celula/interface/apicep.interface';
 
 @Injectable()
 export class MembroService {
@@ -12,6 +14,14 @@ export class MembroService {
 
     if (existeMembro) {
       throw new HttpException('Usuário já existe', HttpStatus.BAD_REQUEST);
+    }
+
+    const { data } = await axios.get<BrasilApiCepResponse>(
+      `https://brasilapi.com.br/api/cep/v2/${createMembroDto.cep}`,
+    );
+
+    if (!data) {
+      throw new HttpException('CEP não existe', HttpStatus.BAD_REQUEST);
     }
 
     // indicado_por: true, mudar nome para um mais claro, mas ele faz referencia do id_membro
