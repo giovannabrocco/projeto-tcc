@@ -3,6 +3,8 @@ import { CreateAssinaturaDto } from './dto/create-assinatura.dto';
 import { UpdateAssinaturaDto } from './dto/update-assinatura.dto';
 import { PrismaService } from 'src/global/prisma.service';
 
+// verificar se vou precisar mesmo de todos os endpoints
+
 @Injectable()
 export class AssinaturaService {
   constructor(private readonly prisma: PrismaService) {}
@@ -34,7 +36,10 @@ export class AssinaturaService {
     const assinatura = await this.findUnique(id);
 
     if (!assinatura) {
-      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Assinatura não encontrada',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const record = await this.prisma.assinatura.update({
@@ -49,7 +54,10 @@ export class AssinaturaService {
     const assinatura = await this.findUnique(id);
 
     if (!assinatura) {
-      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Assinatura não encontrada',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     return await this.prisma.assinatura.delete({
