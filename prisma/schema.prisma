@@ -74,13 +74,14 @@ model Igreja {
 
 }
 
-// adicionar coluna de tipo de usuário (lider, membro, administrador) na tabela de usuários
+
 model Membro {
   id_membro        Int      @id @default(autoincrement())
   id_celula_alocada Int
   id_igreja Int
   id_usuario_triagem Int
   nome_completo       String
+  email String  @unique
   data_nascimento DateTime
   genero String
   estado_civil String
@@ -88,7 +89,7 @@ model Membro {
   bairro_membro String
   latitude_membro Float
   longitude_membro Float
-  telefone String
+  telefone Int
   indicado_por String
   dtahora_cadastro DateTime @default(now())
   observacoes String

@@ -7,20 +7,26 @@ import { PrismaService } from 'src/global/prisma.service';
 export class MembroService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createUsuarioDto: CreateMembroDto) {
-    const existeUsuario = await this.findByNome(CreateMembroDto.nome_completo);
+  async create(createMembroDto: CreateMembroDto) {
+    const existeMembro = await this.findByEmail(createMembroDto.email);
 
-    if (existeUsuario) {
+    if (existeMembro) {
       throw new HttpException('Usuário já existe', HttpStatus.BAD_REQUEST);
     }
 
-    return await this.prisma.usuario.create({
+    // indicado_por: true, mudar nome para um mais claro, mas ele faz referencia do id_membro
+    return await this.prisma.membro.create({
       data: {
-        nome: createUsuarioDto.nome,
-        email: createUsuarioDto.email,
-        senha: createUsuarioDto.senha,
-        status: 'A',
-        tipo_usuario: 'U',
+        nome_completo: createMembroDto.nome_completo,
+        data_nascimento: createMembroDto.data_nascimento,
+        genero: createMembroDto.genero,
+        email: createMembroDto.email,
+        estado_civil: createMembroDto.estado_civil,
+        cep: createMembroDto.cep,
+        telefone: createMembroDto.telefone,
+        id_usuario_triagem: createMembroDto.id_usuario_triagem,
+        id_igreja: createMembroDto.id_igreja,
+        id_celula_alocada: createMembroDto.id_celula_alocada,
       },
     });
   }
@@ -37,15 +43,23 @@ export class MembroService {
     });
   }
 
-  async findByNome(nome: string) {
+  async findByEmail(email: string) {
     return await this.prisma.membro.findUnique({
       select: {
         id_membro: true,
         nome_completo: true,
-        status: true,
+        data_nascimento: true,
+        genero: true,
+        estado_civil: true,
+        indicado_por: true, // mudar nome para um mais claro, mas ele faz referencia do id_membro
+        cep: true,
+        telefone: true,
+        id_usuario_triagem: true,
+        id_igreja: true,
+        id_celula_alocada: true,
       },
       where: {
-        nome_completo: nome,
+        email: email,
       },
     });
   }

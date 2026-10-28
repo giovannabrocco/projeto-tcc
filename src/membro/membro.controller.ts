@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { MembroService } from './membro.service';
 import { CreateMembroDto } from './dto/create-membro.dto';
 import { UpdateMembroDto } from './dto/update-membro.dto';
@@ -19,7 +27,7 @@ export class MembroController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.membroService.findOne(+id);
+    return this.membroService.findUnique(+id);
   }
 
   @Patch(':id')
@@ -28,7 +36,7 @@ export class MembroController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.membroService.remove(+id);
+  delete(@Param('id') id: string) {
+    return this.membroService.delete(+id);
   }
 }
