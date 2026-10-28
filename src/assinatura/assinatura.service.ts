@@ -1,26 +1,61 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateAssinaturaDto } from './dto/create-assinatura.dto';
 import { UpdateAssinaturaDto } from './dto/update-assinatura.dto';
+import { PrismaService } from 'src/global/prisma.service';
 
 @Injectable()
 export class AssinaturaService {
-  create(createAssinaturaDto: CreateAssinaturaDto) {
-    return 'This action adds a new assinatura';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(createAssinaturaDto: CreateAssinaturaDto) {
+    return await this.prisma.assinatura.create({
+      data: {
+        id_usuario: createAssinaturaDto.id_usuario,
+        id_plano: createAssinaturaDto.id_plano,
+        indpossuidesconto: createAssinaturaDto.indpossuidesconto,
+        dtavencimento: createAssinaturaDto.dtavencimento,
+      },
+    });
   }
 
-  findAll() {
-    return `This action returns all assinatura`;
+  async findAll() {
+    return await this.prisma.assinatura.findMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} assinatura`;
+  async findUnique(id: number) {
+    return await this.prisma.assinatura.findUnique({
+      where: {
+        id_assinatura: id,
+      },
+    });
   }
 
-  update(id: number, updateAssinaturaDto: UpdateAssinaturaDto) {
-    return `This action updates a #${id} assinatura`;
+  async update(id: number, data: UpdateAssinaturaDto) {
+    const assinatura = await this.findUnique(id);
+
+    if (!assinatura) {
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    const record = await this.prisma.assinatura.update({
+      where: { id_assinatura: id },
+      data,
+    });
+
+    return record;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} assinatura`;
+  async delete(id: number) {
+    const assinatura = await this.findUnique(id);
+
+    if (!assinatura) {
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    return await this.prisma.assinatura.delete({
+      where: {
+        id_assinatura: id,
+      },
+    });
   }
 }
