@@ -48,6 +48,7 @@ export class UsuarioService {
         email: true,
         status: true,
         tipo_usuario: true,
+        senha: true,
       },
       where: {
         email: email,

@@ -1,12 +1,16 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateCelulaDto } from './dto/create-celula.dto';
 import { PrismaService } from 'src/global/prisma.service';
-import axios from 'node_modules/axios/index.cjs';
 import { BrasilApiCepResponse } from './interface/apicep.interface';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class CelulaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly httpService: HttpService,
+  ) {}
 
   async create(createCelulaDto: CreateCelulaDto) {
     const existeCelula = await this.prisma.celula.findUnique({
@@ -64,8 +68,10 @@ export class CelulaService {
   }
 
   private async buscaLatLongPorCep(cep: string) {
-    const { data } = await axios.get<BrasilApiCepResponse>(
-      `https://brasilapi.com.br/api/cep/v2/${cep}`,
+    const { data } = await firstValueFrom(
+      this.httpService.get<BrasilApiCepResponse>(
+        `https://brasilapi.com.br/api/cep/v2/${cep}`,
+      ),
     );
 
     return {

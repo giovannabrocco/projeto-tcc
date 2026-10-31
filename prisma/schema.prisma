@@ -22,10 +22,12 @@ model Usuario {
   dtahora_criado DateTime @default(now())
   dtahora_atualizado DateTime @updatedAt
 
- Membro Membro[] 
- @@map("tb_usuario")
+  Membro Membro[] 
   assinaturas Assinatura[]
   logTriagems Log_Triagem[]
+  refreshTokens RefreshToken[]
+
+  @@map("tb_usuario")
 }
 
 
@@ -262,5 +264,17 @@ model Historico_Celulas {
 
   Celula Celula @relation(fields: [id_celula], references: [id_celula])
   @@map("tb_historico_celulas")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  user      Usuario     @relation(fields: [userId], references: [id_usuario], onDelete: Cascade)
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId], name: "idx_refresh_token_user_id")
+  @@map("tb_refresh_tokens")
 }
 
