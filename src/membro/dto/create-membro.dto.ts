@@ -40,6 +40,14 @@ export class CreateMembroDto {
   @IsNotEmpty({ message: 'O telefone não pode ser vazia' })
   telefone: number;
 
+  @IsString({ message: 'A indicação deve ser em texto' })
+  @IsNotEmpty({ message: 'A indicação não pode ser vazia' })
+  indicado_por: string;
+
+  @IsString({ message: 'A observação deve ser em texto' })
+  @IsNotEmpty({ message: 'A observação não pode ser vazia' })
+  observacoes: string;
+
   @IsInt({ message: 'O ID deve ser um número' })
   @IsNotEmpty({ message: 'O ID do usuário responsável não pode ser vazio' })
   id_usuario_triagem: number;

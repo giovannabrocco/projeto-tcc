@@ -16,6 +16,7 @@ export class AssinaturaService {
         id_plano: createAssinaturaDto.id_plano,
         indpossuidesconto: createAssinaturaDto.indpossuidesconto,
         dtavencimento: createAssinaturaDto.dtavencimento,
+        status: 'A',
       },
     });
   }
