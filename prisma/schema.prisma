@@ -113,7 +113,7 @@ model Assinatura {
   id_usuario        Int
   id_plano Int
   dtavencimento DateTime
-  dtaultpagamento DateTime?
+  dtaultpagamento DateTime? // ver como vou fazer quanto a este pagamento, pois terá que ser atualizado assim que o pagamento for feito
   status             String
   dtahora_criado    DateTime @default(now())
   dtahora_atualizado DateTime @updatedAt    
