@@ -25,4 +25,8 @@ export class CreateUsuarioDto {
   @MaxLength(100, { message: 'A senha deve ter no máximo 100 caracteres' })
   @IsNotEmpty({ message: 'A senha não pode ser vazia' })
   senha: string;
+
+  @IsString({ message: 'O tipo de usuário deve ser uma string' })
+  @IsNotEmpty({ message: 'O tipo de usuário não pode ser vazio' })
+  tipo_usuario: string;
 }

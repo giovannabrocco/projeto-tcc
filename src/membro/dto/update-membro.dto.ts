@@ -9,12 +9,14 @@ import {
   IsEmail,
   MaxLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateMembroDto extends PartialType(CreateMembroDto) {
   @IsString({ message: 'O nome do membro deve ser uma string' })
   @IsNotEmpty({ message: 'O nome do membro não pode ser vazio' })
   nome_completo: string;
 
+  @Type(() => Date)
   @IsDate({ message: 'Este campo é formato data' })
   @IsNotEmpty({ message: 'A data de nascimento não pode ser vazia' })
   data_nascimento: Date;
@@ -38,9 +40,9 @@ export class UpdateMembroDto extends PartialType(CreateMembroDto) {
   @IsNotEmpty({ message: 'O CEP não pode ser vazia' })
   cep: string;
 
-  @IsInt({ message: 'O número deve ser um número' })
+  @IsString({ message: 'O número deve ser um número' })
   @IsNotEmpty({ message: 'O telefone não pode ser vazia' })
-  telefone: number;
+  telefone: string;
 
   @IsInt({ message: 'O ID deve ser um número' })
   @IsNotEmpty({ message: 'O ID do usuário responsável não pode ser vazio' })

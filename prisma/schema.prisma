@@ -66,7 +66,7 @@ model Igreja {
   dtahora_criado    DateTime @default(now())
   dtahora_atualizado DateTime @updatedAt
   telefone String
-  id_central Int
+  id_central Int?
 
   Celula Celula[]
   Membro Membro[]
@@ -77,7 +77,7 @@ model Igreja {
 
 model Membro {
   id_membro        Int      @id @default(autoincrement())
-  id_celula_alocada Int
+  id_celula_alocada Int?
   id_igreja Int
   id_usuario_triagem Int
   nome_completo       String
@@ -89,16 +89,16 @@ model Membro {
   bairro_membro String
   latitude_membro Float
   longitude_membro Float
-  telefone Int
-  indicado_por String
+  telefone String
+  indicado_por String?
   dtahora_cadastro DateTime @default(now())
-  observacoes String
+  observacoes String?
   status             String
   dtahora_criado    DateTime @default(now())
   dtahora_atualizado DateTime @updatedAt
   indlgpd Boolean @default(false)
 
-Celula Celula @relation(fields: [id_celula_alocada], references: [id_celula]) 
+Celula Celula? @relation(fields: [id_celula_alocada], references: [id_celula]) 
 Usuario Usuario @relation(fields: [id_usuario_triagem], references: [id_usuario], onDelete: Cascade) 
 Igreja Igreja @relation(fields: [id_igreja], references: [id_igreja])
   @@map("tb_membro")

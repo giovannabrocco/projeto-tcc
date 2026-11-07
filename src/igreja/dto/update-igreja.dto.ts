@@ -23,6 +23,5 @@ export class UpdateIgrejaDto extends PartialType(CreateIgrejaDto) {
   @IsNotEmpty({ message: 'O endereço não pode ser vazio' })
   telefone: string;
 
-  @IsNotEmpty({ message: 'O ID da central não pode ser vazio' })
   id_central: number;
 }

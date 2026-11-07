@@ -8,17 +8,18 @@ export class IgrejaService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createIgrejaDto: CreateIgrejaDto) {
-    const existeCentral = await this.prisma.igreja.findUnique({
-      where: { id_igreja: createIgrejaDto.id_central },
-    });
+    if (createIgrejaDto.id_central) {
+      const existeCentral = await this.prisma.igreja.findUnique({
+        where: { id_igreja: createIgrejaDto.id_central },
+      });
 
-    if (!existeCentral) {
-      throw new HttpException(
-        'O id de igreja central passado não existe',
-        HttpStatus.BAD_REQUEST,
-      );
+      if (!existeCentral) {
+        throw new HttpException(
+          'O id de igreja central passado não existe',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
-
     // adicionar coluna endereço, id_usuario_responsavel na tabela igreja
     return await this.prisma.igreja.create({
       data: {

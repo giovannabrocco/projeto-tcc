@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -13,8 +14,8 @@ export class CreateMembroDto {
   @IsNotEmpty({ message: 'O nome do membro não pode ser vazio' })
   nome_completo: string;
 
+  @Type(() => Date)
   @IsDate({ message: 'Este campo é formato data' })
-  @IsNotEmpty({ message: 'A data de nascimento não pode ser vazia' })
   data_nascimento: Date;
 
   @IsString({ message: 'O gênero deve ser uma string' })
@@ -32,20 +33,18 @@ export class CreateMembroDto {
   @IsNotEmpty({ message: 'O estado civil não pode ser vazia' })
   estado_civil: string;
 
-  @IsString({ message: 'O número deve ser um número' })
+  @IsString({ message: 'O CEP deve ser uma string' })
   @IsNotEmpty({ message: 'O CEP não pode ser vazia' })
   cep: string;
 
-  @IsInt({ message: 'O número deve ser um número' })
+  @IsString({ message: 'O telefone deve ser uma string' })
   @IsNotEmpty({ message: 'O telefone não pode ser vazia' })
-  telefone: number;
+  telefone: string;
 
   @IsString({ message: 'A indicação deve ser em texto' })
   @IsNotEmpty({ message: 'A indicação não pode ser vazia' })
   indicado_por: string;
 
-  @IsString({ message: 'A observação deve ser em texto' })
-  @IsNotEmpty({ message: 'A observação não pode ser vazia' })
   observacoes: string;
 
   @IsInt({ message: 'O ID deve ser um número' })
@@ -56,7 +55,5 @@ export class CreateMembroDto {
   @IsNotEmpty({ message: 'O ID da igreja não pode ser vazio' })
   id_igreja: number;
 
-  @IsInt({ message: 'O ID deve ser um número' })
-  @IsNotEmpty({ message: 'O ID da célula não pode ser vazio' })
   id_celula_alocada: number;
 }
