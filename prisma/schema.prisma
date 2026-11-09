@@ -1,7 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Conectus — schema v2 (SaaS multitenant + assinatura via Mercado Pago)
+// Convenção mantida do projeto: colunas em snake_case, tabelas com prefixo tb_.
+// A API converte para camelCase nas respostas (ver docs/API_CONTRACT.md do front-end).
 
 generator client {
   provider = "prisma-client"
@@ -12,255 +11,416 @@ datasource db {
   provider = "postgresql"
 }
 
-model Usuario {
-  id_usuario        Int      @id @default(autoincrement())
-  tipo_usuario     String
-  nome            String
-  email           String   @unique
-  senha      String   
-  status             String
-  dtahora_criado DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt
-
- Membro Membro[] 
- @@map("tb_usuario")
-  assinaturas Assinatura[]
-  logTriagems Log_Triagem[]
+// ------------------------------------------------------------------ enums
+enum Perfil {
+  ADMINISTRADOR
+  LIDER
+  VOLUNTARIO
 }
 
-
-model Celula {
-  id_celula         Int      @id @default(autoincrement())
-  nome_celula       String
-  id_lider_celula    Int @unique
-  capacidade_maxima   Int
-  capacidade_atual     Int
-  hora_celula    String
-  diaSemana String
-  status             String
-  dtahora_criado    DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt
-  perfil_grupo String
-  faixa_etaria_min Int
-  faixa_etaria_max Int
-  cep String
-  bairro String
-  latitude Float
-  longitude Float
-  id_igreja Int 
-
-  igreja Igreja @relation(fields: [id_igreja], references: [id_igreja])
-  Membro Membro[]
-  @@map("tb_celula")
-  historicoCelulas Historico_Celulas[]
+enum StatusMembro {
+  AGUARDANDO_TRIAGEM
+  ALOCADO
+  LISTA_ESPERA
+  DESLIGADO
 }
 
+enum StatusTriagem {
+  SUGERIDA
+  APROVADA
+  REJEITADA
+}
 
+enum StatusEspera {
+  AGUARDANDO
+  RESOLVIDO
+}
+
+// TESTE     -> período gratuito rodando
+// ATIVA     -> pagamento em dia
+// ATRASADA  -> cobrança recusada/atrasada, ainda dentro da carência
+// CANCELADA -> cliente cancelou; usa até o fim do período já pago
+// EXPIRADA  -> teste acabou / carência esgotada / período pago acabou => BLOQUEADA (somente leitura)
+enum StatusAssinatura {
+  TESTE
+  ATIVA
+  ATRASADA
+  CANCELADA
+  EXPIRADA
+}
+
+enum StatusFatura {
+  PENDENTE
+  PAGA
+  RECUSADA
+  ESTORNADA
+}
+
+// ------------------------------------------------------------------ tenant
 model Igreja {
-  id_igreja        Int      @id @default(autoincrement())
-  nome_igreja       String
-  denominacao  String
-  cidade String
-  estado String
-  status             String
-  dtahora_criado    DateTime @default(now())
+  id_igreja          Int      @id @default(autoincrement())
+  nome_igreja        String
+  denominacao        String   @default("")
+  cidade             String
+  estado             String
+  telefone           String?
+  ativo              Boolean  @default(true)
+  // Hierarquia opcional (igreja central -> filiais). Nulo = igreja independente/central.
+  id_central         Int?
+  dtahora_criado     DateTime @default(now())
   dtahora_atualizado DateTime @updatedAt
-  telefone String
-  id_central Int?
 
-  Celula Celula[]
-  Membro Membro[]
+  central  Igreja?  @relation("Hierarquia", fields: [id_central], references: [id_igreja])
+  filiais  Igreja[] @relation("Hierarquia")
+  usuarios Usuario[]
+  celulas  Celula[]
+  membros  Membro[]
+  assinatura Assinatura?
+
   @@map("tb_igreja")
-
 }
 
+model Usuario {
+  id_usuario         Int      @id @default(autoincrement())
+  id_igreja          Int
+  nome               String
+  email              String   @unique
+  telefone           String   @default("")
+  senha              String
+  perfil             Perfil
+  ativo              Boolean  @default(true)
+  // true quando a senha foi definida pelo administrador: o front deve pedir a troca no 1º login
+  senha_temporaria   Boolean  @default(false)
+  dtahora_criado     DateTime @default(now())
+  dtahora_atualizado DateTime @updatedAt
 
+  igreja            Igreja             @relation(fields: [id_igreja], references: [id_igreja])
+  celulasLideradas  Celula[]
+  membrosTriados    Membro[]
+  logsVoluntario    Log_Triagem[]      @relation("LogVoluntario")
+  logsDecisao       Log_Triagem[]      @relation("LogDecisao")
+  tokensSenha       Token_Senha[]
+  notificacoesLidas Notificacao_Lida[]
+
+  @@index([id_igreja])
+  @@map("tb_usuario")
+}
+
+model Token_Senha {
+  id_token   Int       @id @default(autoincrement())
+  id_usuario Int
+  token_hash String    @unique
+  expira_em  DateTime
+  usado_em   DateTime?
+  dtahora_criado DateTime @default(now())
+
+  Usuario Usuario @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@map("tb_token_senha")
+}
+
+// ------------------------------------------------------------------ células
+model Celula {
+  id_celula          Int      @id @default(autoincrement())
+  id_igreja          Int
+  id_lider           Int
+  nome_celula        String
+  capacidade_maxima  Int
+  capacidade_atual   Int      @default(0)
+  hora_celula        String   // HH:MM
+  dia_semana         String   // SEG TER QUA QUI SEX SAB DOM
+  perfil_grupo       String   // JOVENS UNIVERSITARIOS CASAIS ...
+  faixa_etaria_min   Int
+  faixa_etaria_max   Int
+  cep                String
+  bairro             String
+  cidade             String
+  endereco           String   @default("")
+  descricao          String   @default("")
+  latitude           Float
+  longitude          Float
+  ativa              Boolean  @default(true)
+  dtahora_criado     DateTime @default(now())
+  dtahora_atualizado DateTime @updatedAt
+
+  igreja    Igreja             @relation(fields: [id_igreja], references: [id_igreja])
+  lider     Usuario            @relation(fields: [id_lider], references: [id_usuario])
+  membros   Membro[]
+  historico Historico_Celulas[]
+  logs      Log_Triagem[]
+
+  @@index([id_igreja, ativa])
+  @@index([id_lider])
+  @@map("tb_celula")
+}
+
+// ------------------------------------------------------------------ membros
 model Membro {
-  id_membro        Int      @id @default(autoincrement())
-  id_celula_alocada Int?
-  id_igreja Int
-  id_usuario_triagem Int
-  nome_completo       String
-  email String  @unique
-  data_nascimento DateTime
-  genero String
-  estado_civil String
-  cep String
-  bairro_membro String
-  latitude_membro Float
-  longitude_membro Float
-  telefone String
-  indicado_por String?
-  dtahora_cadastro DateTime @default(now())
-  observacoes String?
-  status             String
-  dtahora_criado    DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt
-  indlgpd Boolean @default(false)
+  id_membro          Int          @id @default(autoincrement())
+  id_igreja          Int
+  id_celula_alocada  Int?
+  id_usuario_triagem Int?
+  nome_completo      String
+  email              String?
+  data_nascimento    DateTime     @db.Date
+  genero             String       // F | M
+  estado_civil       String       // SOLTEIRO CASADO DIVORCIADO VIUVO
+  telefone           String       // texto: "(11) 91234-5678" não cabe em Int
+  cep                String
+  bairro_membro      String
+  cidade             String
+  latitude_membro    Float?
+  longitude_membro   Float?
+  perfil_interesse   String       @default("")
+  indicado_por       Int?         // id_membro de quem indicou
+  observacoes        String       @default("")
+  status_membro      StatusMembro @default(AGUARDANDO_TRIAGEM)
+  indlgpd            Boolean      @default(false) // consentimento LGPD
+  dtahora_cadastro   DateTime     @default(now())
+  dtahora_atualizado DateTime     @updatedAt
 
-Celula Celula? @relation(fields: [id_celula_alocada], references: [id_celula]) 
-Usuario Usuario @relation(fields: [id_usuario_triagem], references: [id_usuario], onDelete: Cascade) 
-Igreja Igreja @relation(fields: [id_igreja], references: [id_igreja])
+  igreja          Igreja   @relation(fields: [id_igreja], references: [id_igreja])
+  celula          Celula?  @relation(fields: [id_celula_alocada], references: [id_celula])
+  usuarioTriagem  Usuario? @relation(fields: [id_usuario_triagem], references: [id_usuario])
+  indicador       Membro?  @relation("Indicacao", fields: [indicado_por], references: [id_membro])
+  indicados       Membro[] @relation("Indicacao")
+
+  disponibilidades Disponibilidade_Membro[]
+  historico        Historico_Celulas[]
+  listaEspera      Lista_Espera[]
+  logs             Log_Triagem[]
+  feedbacks        Feedback[]
+
+  @@unique([id_igreja, email])
+  @@index([id_igreja, status_membro])
+  @@index([id_celula_alocada])
   @@map("tb_membro")
-  listaEsperas Lista_Espera[]
-  disponibilidadeMembros Disponibilidade_Membro[]
-  logTriagems Log_Triagem[]
-  feedbacks Feedback[]
 }
 
-model Assinatura {
-  id_assinatura        Int      @id @default(autoincrement())
-  id_usuario        Int
-  id_plano Int
-  dtavencimento DateTime
-  dtaultpagamento DateTime? // ver como vou fazer quanto a este pagamento, pois terá que ser atualizado assim que o pagamento for feito
-  status             String
-  dtahora_criado    DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt    
-  indpossuidesconto Boolean @default(false)
-
-  Usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
-  @@map("tb_assinatura")
-  @@index([id_usuario], name: "fk_assinatura_usuario")
-
-  promocaos Promocao[]
-  descontos Desconto[]
-  planos Plano[]
-  faturas Fatura[]
-}
-
-model Promocao {
-  id_promocao        Int      @id @default(autoincrement())
-  id_assinatura        Int
-  dtainicio DateTime
-  dtaexpiracao DateTime
-  status             String
-  perc_desconto Float
-  dtahora_criado    DateTime @default(now())
+model Disponibilidade_Membro {
+  id_disponibilidade Int      @id @default(autoincrement())
+  id_membro          Int
+  dia_semana         String
+  hora_inicio        String   @default("")
+  hora_fim           String   @default("")
   dtahora_atualizado DateTime @updatedAt
-  indpromocao String
-  descricao String
+
+  Membro Membro @relation(fields: [id_membro], references: [id_membro], onDelete: Cascade)
+
+  @@index([id_membro])
+  @@map("tb_disponibilidade_membro")
+}
+
+model Historico_Celulas {
+  id_historico       Int       @id @default(autoincrement())
+  id_membro          Int
+  id_celula          Int
+  dta_entrada        DateTime  @db.Date
+  dta_saida          DateTime? @db.Date
+  motivo_saida       String?
+  dtahora_criado     DateTime  @default(now())
+  dtahora_atualizado DateTime  @updatedAt
+
+  Membro Membro @relation(fields: [id_membro], references: [id_membro], onDelete: Cascade)
+  Celula Celula @relation(fields: [id_celula], references: [id_celula])
+
+  @@index([id_membro])
+  @@index([id_celula])
+  @@map("tb_historico_celulas")
+}
+
+// ------------------------------------------------------------------ triagem
+model Log_Triagem {
+  id_log             Int           @id @default(autoincrement())
+  id_membro          Int
+  id_celula_sugerida Int
+  id_voluntario      Int
+  score_matching     Float?
+  criterios_score    Json?
+  status_triagem     StatusTriagem @default(SUGERIDA)
+  id_resp_decisao    Int?
+  motivo_rejeicao    String?
+  dtahora_triagem    DateTime      @default(now())
+
+  Membro    Membro  @relation(fields: [id_membro], references: [id_membro], onDelete: Cascade)
+  Celula    Celula  @relation(fields: [id_celula_sugerida], references: [id_celula])
+  Voluntario Usuario @relation("LogVoluntario", fields: [id_voluntario], references: [id_usuario])
+  Decisor   Usuario? @relation("LogDecisao", fields: [id_resp_decisao], references: [id_usuario])
+  feedbacks Feedback[]
+
+  @@index([id_membro])
+  @@map("tb_log_triagem")
+}
+
+model Lista_Espera {
+  id_espera      Int          @id @default(autoincrement())
+  id_membro      Int
+  data_entrada   DateTime     @default(now())
+  status         StatusEspera @default(AGUARDANDO)
+  motivo         String
+  tentativas     Int          @default(1)
+  dtaresolucao   DateTime?
+  dtahora_criado DateTime     @default(now())
+
+  Membro Membro @relation(fields: [id_membro], references: [id_membro], onDelete: Cascade)
+
+  @@index([id_membro, status])
+  @@map("tb_lista_espera")
+}
+
+model Feedback {
+  id_feedback          Int       @id @default(autoincrement())
+  id_membro            Int
+  id_log_triagem       Int?
+  status_adaptacao     String    // RESPONDEU NAO_RESPONDEU PARTICIPANDO
+  nota_integracao      Int?
+  permaneceu_na_celula Boolean   @default(true)
+  dta_visita           DateTime? @db.Date
+  dta_proximo_contato  DateTime? @db.Date
+  comentarios_membro   String    @default("")
+  avaliacao_lider      String    @default("")
+  dtahora_criado       DateTime  @default(now())
+  dtahora_atualizado   DateTime  @updatedAt
+
+  Membro Membro       @relation(fields: [id_membro], references: [id_membro], onDelete: Cascade)
+  Log    Log_Triagem? @relation(fields: [id_log_triagem], references: [id_log])
+
+  @@index([id_membro])
+  @@map("tb_feedback")
+}
+
+model Notificacao_Lida {
+  id_notificacao_lida Int      @id @default(autoincrement())
+  id_usuario          Int
+  chave               String
+  dtahora_criado      DateTime @default(now())
+
+  Usuario Usuario @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@unique([id_usuario, chave])
+  @@map("tb_notificacao_lida")
+}
+
+// ------------------------------------------------------------------ planos e cobrança
+model Plano {
+  id_plano           String   @id // ESSENCIAL | INTERMEDIARIO | PREMIUM
+  nome               String
+  descricao          String   @default("")
+  valor              Decimal  @db.Decimal(10, 2)
+  // null = ilimitado
+  limite_membros     Int?
+  limite_celulas     Int?
+  limite_usuarios    Int?
+  historico_meses    Int?
+  ativo              Boolean  @default(true)
+  dtahora_criado     DateTime @default(now())
+  dtahora_atualizado DateTime @updatedAt
+
+  assinaturas          Assinatura[] @relation("PlanoAtual")
+  assinaturasPendentes Assinatura[] @relation("PlanoPendente")
+  faturas              Fatura[]
+
+  @@map("tb_plano")
+}
+
+// Uma assinatura por igreja (o cliente do SaaS é a igreja, não o usuário).
+model Assinatura {
+  id_assinatura      Int              @id @default(autoincrement())
+  id_igreja          Int              @unique
+  id_plano           String
+  id_plano_pendente  String?          // downgrade agendado para o fim do período
+  status             StatusAssinatura @default(TESTE)
+  dta_inicio_teste   DateTime?
+  dta_fim_teste      DateTime?
+  dtavencimento      DateTime?        // fim do período já pago / próxima cobrança
+  dtaultpagamento    DateTime?
+  dta_cancelamento   DateTime?
+  mp_preapproval_id  String?          @unique
+  mp_status          String?
+  email_pagador      String?
+  valor_cobrado      Decimal?         @db.Decimal(10, 2)
+  indpossuidesconto  Boolean          @default(false)
+  dtahora_criado     DateTime         @default(now())
+  dtahora_atualizado DateTime         @updatedAt
+
+  Igreja        Igreja    @relation(fields: [id_igreja], references: [id_igreja])
+  Plano         Plano     @relation("PlanoAtual", fields: [id_plano], references: [id_plano])
+  PlanoPendente Plano?    @relation("PlanoPendente", fields: [id_plano_pendente], references: [id_plano])
+  faturas       Fatura[]
+  descontos     Desconto[]
+
+  @@map("tb_assinatura")
+}
+
+// Cada cobrança recorrente do Mercado Pago vira uma fatura (histórico de pagamentos).
+model Fatura {
+  id_fatura                Int          @id @default(autoincrement())
+  id_assinatura            Int
+  id_plano                 String
+  mes                      Int
+  ano                      Int
+  dta_vencimento           DateTime
+  dtahor_pagamento         DateTime?
+  vlrtotal                 Decimal      @db.Decimal(10, 2)
+  vlrapagar                Decimal      @db.Decimal(10, 2)
+  status                   StatusFatura @default(PENDENTE)
+  motivo_recusa            String?
+  mp_authorized_payment_id String?      @unique
+  mp_payment_id            String?
+  dtahora_criado           DateTime     @default(now())
+  dtahora_atualizado       DateTime     @updatedAt
 
   Assinatura Assinatura @relation(fields: [id_assinatura], references: [id_assinatura])
+  Plano      Plano      @relation(fields: [id_plano], references: [id_plano])
+
+  @@index([id_assinatura])
+  @@map("tb_fatura")
+}
+
+// Cupom de desconto (gerenciado pela plataforma, aplicado no checkout)
+model Promocao {
+  id_promocao        Int      @id @default(autoincrement())
+  codigo             String   @unique
+  descricao          String   @default("")
+  perc_desconto      Float
+  dtainicio          DateTime
+  dtaexpiracao       DateTime
+  ativo              Boolean  @default(true)
+  max_usos           Int?
+  total_usos         Int      @default(0)
+  dtahora_criado     DateTime @default(now())
+  dtahora_atualizado DateTime @updatedAt
+
   descontos Desconto[]
 
-  @@index([id_assinatura], name: "fk_promocao_assinatura")
-
- 
   @@map("tb_promocao")
 }
 
 model Desconto {
-  id_desconto        Int      @id @default(autoincrement())
-  id_assinatura        Int
-  id_promocao        Int
-  dtahora_criado    DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt
+  id_desconto    Int      @id @default(autoincrement())
+  id_assinatura  Int
+  id_promocao    Int
+  perc_aplicado  Float
+  dtahora_criado DateTime @default(now())
 
-  Promocao Promocao @relation(fields: [id_promocao], references: [id_promocao])
+  Promocao   Promocao   @relation(fields: [id_promocao], references: [id_promocao])
   Assinatura Assinatura @relation(fields: [id_assinatura], references: [id_assinatura])
+
+  @@unique([id_assinatura, id_promocao])
   @@map("tb_desconto")
 }
 
-model Fatura {
-  id_fatura        Int      @id @default(autoincrement())
-  id_assinatura        Int
-  mes Int
-  ano Int
-  dta_vencimento DateTime
-  dtahor_pagamento DateTime
-  vlrtotal Float
-  vlrapagar Float
+// Auditoria/idempotência dos webhooks do Mercado Pago
+model Evento_Pagamento {
+  id_evento       Int       @id @default(autoincrement())
+  tipo            String
+  mp_id           String
+  acao            String?
+  payload         Json
+  processado_em   DateTime?
+  erro            String?
+  dtahora_criado  DateTime  @default(now())
 
-  Assinatura Assinatura @relation(fields: [id_assinatura], references: [id_assinatura])
-  @@map("tb_fatura")
+  @@index([tipo, mp_id])
+  @@map("tb_evento_pagamento")
 }
-
-
-model Plano {
-  id_plano        String   @id
-  descricao String
-  valor Float         
-  dtahora_criado    DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt
-
-  Assinatura Assinatura[]
-  @@map("tb_plano")
-}
-
-model Lista_Espera {
-  id_espera        Int      @id @default(autoincrement())
-  id_membro        Int
-  data_entrada DateTime
-  status             String
-  motivo String
-  dtaresolucao DateTime
-  dtahora_criado    DateTime @default(now())
-
-  Membro Membro @relation(fields: [id_membro], references: [id_membro])
-  @@map("tb_lista_espera")
-}
-
-
-model Disponibilidade_Membro {
-  id_disponibilidade        Int      @id @default(autoincrement())
-  id_membro        Int
-  dia_semana String
-  hora_inicio String
-  hora_fim String
-  dtahora_atualizado DateTime @updatedAt
-
-  Membro Membro @relation(fields: [id_membro], references: [id_membro])
-  @@map("tb_disponibilidade_membro")
-}
-
-model Log_Triagem {
-  id_log        Int      @id @default(autoincrement())
-  id_membro        Int
-  id_celula_sugerida Int
-  score_matching Float
-  criterios_score String
-  status_triagem String
-  id_resp_decisao Int
-  motivo_rejeicao String
-  dtahora_triagem DateTime @default(now())
-
-
-  Membro Membro @relation(fields: [id_membro], references: [id_membro])
-  Usuario Usuario @relation(fields: [id_resp_decisao], references: [id_usuario])
-  @@map("tb_log_triagem")
-}
-
-model Feedback {
-  id_feedback        Int      @id @default(autoincrement())
-  id_membro        Int
-  id_log_traigem Int
-  status_adaptacao  String
-  nota_integracao Int
-  permaneceu_na_celula String
-  dta_visita DateTime @default(now())
-  dta_proximo_contato DateTime
-  comentarios_membro String
-  avaliacao_lider String
-  dtahora_criado    DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt
-
-
-  Membro Membro @relation(fields: [id_membro], references: [id_membro])
-  @@map("tb_feedback")
-}
-
-
-model Historico_Celulas {
-  id_historico        Int      @id @default(autoincrement())
-  id_celula        Int
-  dta_inicio DateTime
-  dta_fim DateTime
-  status             String
-  dtahora_criado    DateTime @default(now())
-  dtahora_atualizado DateTime @updatedAt
-
-  Celula Celula @relation(fields: [id_celula], references: [id_celula])
-  @@map("tb_historico_celulas")
-}
-

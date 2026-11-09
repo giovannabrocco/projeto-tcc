@@ -1,0 +1,9 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": "test/.*\\.e2e-spec\\.ts$",
+  "transform": { "^.+\\.(t|j)s$": ["ts-jest", { "diagnostics": false, "tsconfig": { "allowJs": true, "module": "commonjs", "esModuleInterop": true, "experimentalDecorators": true, "emitDecoratorMetadata": true, "target": "ES2022" } }] },
+  "transformIgnorePatterns": ["node_modules/(?!(@nestjs/(schedule|throttler|jwt|config|mapped-types)|jsonwebtoken|@prisma/adapter-pg)/)"],
+  "testTimeout": 60000
+}
