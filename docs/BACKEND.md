@@ -60,8 +60,8 @@ própria célula e registra feedback/saída). Guard global: toda rota exige JWT,
 
 **Multitenância**: o `idIgreja` vem do token, nunca do corpo. Registro de outra igreja responde **404**.
 
-**Matching** (RF03, `src/triagem/matching.ts`, função pura testada): pesos distância 0.40, disponibilidade 0.25,
-perfil 0.20, faixa etária 0.15; Haversine; regras eliminatórias (célula lotada/inativa, gênero incompatível em
+**Matching** (RF03, `src/triagem/matching.ts`, função pura testada): pesos distância 0.40, faixa etária 0.25,
+disponibilidade 0.20, perfil do grupo 0.15; Haversine; regras eliminatórias (célula lotada/inativa, gênero incompatível em
 células exclusivas, etc.); desempate por mais vagas e menor distância; retorna até 3 sugestões, mínimo 65. Membro
 sem coordenadas pontua 0 em distância. Cada sugestão gera um `Log_Triagem` com os critérios.
 
