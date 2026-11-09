@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateCelulaDto } from './dto/create-celula.dto';
 import { PrismaService } from 'src/global/prisma.service';
+import axios from 'axios';
 import { BrasilApiCepResponse } from './interface/apicep.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -28,9 +29,27 @@ export class CelulaService {
       where: { id_membro: createCelulaDto.id_lider_celula },
     });
 
+    if (!liderDto) {
+      throw new HttpException(
+        'O membro líder informado não existe',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const igrejaLider = await this.prisma.igreja.findUnique({
       where: { id_igreja: liderDto.id_igreja },
     });
+
+    if (!igrejaLider) {
+      throw new HttpException(
+        'O lider não está vinculado a nenhuma célula',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const { data } = await axios.get<BrasilApiCepResponse>(
+      `https://brasilapi.com.br/api/cep/v2/${createCelulaDto.cep}`,
+    );
 
     const latiLong = await this.buscaLatLongPorCep(createCelulaDto.cep);
 
@@ -47,9 +66,9 @@ export class CelulaService {
         faixa_etaria_min: createCelulaDto.faixa_etaria_min,
         faixa_etaria_max: createCelulaDto.faixa_etaria_max,
         cep: createCelulaDto.cep,
-        bairro: createCelulaDto.bairro,
-        latitude: latiLong.latitude,
-        longitude: latiLong.longitude,
+        bairro: data.neighborhood,
+        latitude: Number(latiLong.latitude),
+        longitude: Number(latiLong.longitude),
         id_igreja: igrejaLider.id_igreja,
       },
     });
