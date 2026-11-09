@@ -1,26 +1,45 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsInt, IsDate } from 'class-validator';
 
 export class CreatePromocaoDto {
+  @ApiProperty({
+    example: 'ID da assinatura',
+  })
   @IsInt({ message: 'O ID deve ser um número' })
   @IsNotEmpty({ message: 'O nome do membro não pode ser vazio' })
   id_assinatura: number;
 
+  @ApiProperty({
+    example: 'Data de início',
+  })
   @IsDate({ message: 'Este campo é formato data' })
   @IsNotEmpty({ message: 'A data de início não pode ser vazia' })
   dtainicio: Date;
 
+  @ApiProperty({
+    example: 'Data de expiração',
+  })
   @IsDate({ message: 'Este campo é formato data' })
-  @IsNotEmpty({ message: 'A data de início não pode ser vazia' })
+  @IsNotEmpty({ message: 'A data de expiração não pode ser vazia' })
   dtaexpiracao: Date;
 
+  @ApiProperty({
+    example: 'Percentual de desconto',
+  })
   @IsInt({ message: 'O percentual deve ser um número' })
   @IsNotEmpty({ message: 'O percentual não pode ser vazio' })
   perc_desconto: number;
 
+  @ApiProperty({
+    example: 'Indicador da promoção',
+  })
   @IsString({ message: 'O indicador deve ser um texto' })
   @IsNotEmpty({ message: 'O indicador não pode ser vazio' })
   indpromocao: string;
 
+  @ApiProperty({
+    example: 'Descrição da promoção',
+  })
   @IsString({ message: 'A descrição deve ser um texto' })
   @IsNotEmpty({ message: 'A descrição não pode ser vazio' })
   descricao: string;
