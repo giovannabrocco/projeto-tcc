@@ -1,0 +1,169 @@
+### ============================================================
+### Roteiro de testes da API Conectus
+### Use no VS Code com a extensão "REST Client" (humao.rest-client).
+### Clique em "Send Request" acima de cada bloco, NA ORDEM.
+### Antes de tudo: API rodando (npm run start:dev).
+### ============================================================
+
+@api = http://localhost:3333/api
+@contentType = application/json
+
+### 1. Planos (público) -> deve listar ESSENCIAL, INTERMEDIARIO, PREMIUM
+GET {{api}}/planos
+
+### 2. Cadastro do assinante -> 201, devolve token (troque o e-mail se rodar duas vezes)
+# @name cadastro
+POST {{api}}/igrejas
+Content-Type: {{contentType}}
+
+{
+  "igreja": { "nomeIgreja": "Igreja Teste", "denominacao": "Batista", "cidade": "Ribeirão Preto", "estado": "SP", "plano": "INTERMEDIARIO" },
+  "administrador": { "nome": "Admin Teste", "email": "admin@teste.com", "senha": "senha-forte-1" }
+}
+
+### 3. Login do admin -> guarda o token
+# @name login
+POST {{api}}/auth/login
+Content-Type: {{contentType}}
+
+{ "email": "admin@teste.com", "senha": "senha-forte-1" }
+
+###
+@token = {{login.response.body.token}}
+
+### 4. Situação da assinatura -> status TESTE, diasRestantes 7
+GET {{api}}/assinatura
+Authorization: Bearer {{token}}
+
+### 5. Criar líder
+# @name lider
+POST {{api}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "nome": "Pedro Líder", "email": "pedro@teste.com", "perfil": "LIDER", "senhaTemporaria": "temporaria-1" }
+
+###
+@idLider = {{lider.response.body.idUsuario}}
+
+### 6. Criar voluntária
+POST {{api}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "nome": "Carol Voluntária", "email": "carol@teste.com", "perfil": "VOLUNTARIO", "senhaTemporaria": "temporaria-1" }
+
+### 7. Criar célula (use um CEP real; ele é transformado em latitude/longitude)
+# @name celula
+POST {{api}}/celulas
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "nomeCelula": "Centro - Jovens", "idLider": {{idLider}}, "capacidadeMaxima": 15,
+  "horario": "20:00", "diaSemana": "QUA", "perfilGrupo": "JOVENS", "faixaEtaria": "18-28",
+  "cep": "14015-040", "bairro": "Centro"
+}
+
+###
+@idCelula = {{celula.response.body.idCelula}}
+
+### 8. Login da voluntária
+# @name loginVol
+POST {{api}}/auth/login
+Content-Type: {{contentType}}
+
+{ "email": "carol@teste.com", "senha": "temporaria-1" }
+
+###
+@vol = {{loginVol.response.body.token}}
+
+### 9. Cadastrar membro
+# @name membro
+POST {{api}}/membros
+Authorization: Bearer {{vol}}
+Content-Type: {{contentType}}
+
+{
+  "nomeCompleto": "Mariana Costa", "dataNascimento": "2002-05-10", "genero": "F", "estadoCivil": "SOLTEIRO",
+  "telefone": "(16) 99999-1234", "cep": "14015-040", "bairro": "Centro", "perfilInteresse": "JOVENS",
+  "disponibilidades": [ { "diaSemana": "QUA", "horarioInicio": "19:00", "horarioFim": "22:00" } ]
+}
+
+###
+@idMembro = {{membro.response.body.idMembro}}
+
+### 10. Pendentes de triagem -> deve aparecer a Mariana com melhorSugestao
+GET {{api}}/triagem/pendentes
+Authorization: Bearer {{vol}}
+
+### 11. Matching -> sugestões com score e critérios (distância, idade, disponibilidade, perfil)
+# @name matching
+POST {{api}}/triagem/{{idMembro}}/matching
+Authorization: Bearer {{vol}}
+
+###
+@idLog = {{matching.response.body.sugestoes[0].idLog}}
+
+### 12. Alocar na célula sugerida -> membro ALOCADO, capacidadeAtual 1
+POST {{api}}/triagem/{{idMembro}}/alocacao
+Authorization: Bearer {{vol}}
+Content-Type: {{contentType}}
+
+{ "idCelula": {{idCelula}}, "modo": "AUTOMATICA", "idLog": {{idLog}} }
+
+### 13. Alocar de novo -> 409 JA_TRIADO
+POST {{api}}/triagem/{{idMembro}}/alocacao
+Authorization: Bearer {{vol}}
+Content-Type: {{contentType}}
+
+{ "idCelula": {{idCelula}} }
+
+### 14. Dashboard
+GET {{api}}/relatorios/resumo
+Authorization: Bearer {{vol}}
+
+### 15. Relatório de ocupação (só admin; voluntária receberia 403)
+GET {{api}}/relatorios/ocupacao
+Authorization: Bearer {{token}}
+
+### 16. Voluntária tentando criar célula -> 403
+POST {{api}}/celulas
+Authorization: Bearer {{vol}}
+Content-Type: {{contentType}}
+
+{ "nomeCelula": "x" }
+
+### 17. Checkout Mercado Pago -> devolve initPoint (abra no navegador)
+# Use o e-mail de um COMPRADOR DE TESTE do Mercado Pago em emailPagador
+POST {{api}}/assinatura/checkout
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "plano": "INTERMEDIARIO", "emailPagador": "comprador-de-teste@testuser.com" }
+
+### 18. Depois de pagar no Mercado Pago -> atualiza o status (deve virar ATIVA)
+POST {{api}}/assinatura/sincronizar
+Authorization: Bearer {{token}}
+
+### 19. Trocar de plano
+POST {{api}}/assinatura/plano
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "plano": "PREMIUM" }
+
+### 20. Cancelar assinatura
+POST {{api}}/assinatura/cancelar
+Authorization: Bearer {{token}}
+
+### ============================================================
+### TESTE DE BLOQUEIO: no DBeaver rode
+###   UPDATE tb_assinatura SET status='ATRASADA', dtavencimento = now() - interval '10 days';
+### (e confirme com Commit). Depois:
+###  - o bloco 14 (GET) continua funcionando
+###  - o bloco 9 (POST /membros) passa a dar 403 ASSINATURA_BLOQUEADA
+###  - o bloco 4 (GET /assinatura) continua funcionando
+### Para voltar:
+###   UPDATE tb_assinatura SET status='TESTE', dtavencimento = NULL;
+### ============================================================
