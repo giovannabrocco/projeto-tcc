@@ -52,6 +52,14 @@ export class MercadoPagoService {
     });
   }
 
+  /** O MP respondeu 404: o recurso não existe (ex.: id de teste do painel). Não adianta o MP reenviar. */
+  private naoEncontrado(e: any, o_que: string) {
+    if (e?.response?.status === 404) {
+      this.logger.warn(`Mercado Pago não encontrou ${o_que} consultada.`);
+      falhar(404, `O Mercado Pago não encontrou ${o_que}.`, { codigo: 'MP_NAO_ENCONTRADO' });
+    }
+  }
+
   private erro(e: any, acao: string): never {
     const detalhe = e?.response?.data ?? e?.message;
     this.logger.error(`Falha ao ${acao}: ${JSON.stringify(detalhe)}`);
@@ -93,6 +101,7 @@ export class MercadoPagoService {
     try {
       return (await this.http().get<MpPreapproval>(`/preapproval/${encodeURIComponent(id)}`)).data;
     } catch (e) {
+      this.naoEncontrado(e, 'a assinatura');
       return this.erro(e, 'consultar a assinatura');
     }
   }
@@ -121,6 +130,7 @@ export class MercadoPagoService {
     try {
       return (await this.http().get<MpPagamentoRecorrente>(`/authorized_payments/${encodeURIComponent(id)}`)).data;
     } catch (e) {
+      this.naoEncontrado(e, 'a cobrança');
       return this.erro(e, 'consultar a cobrança');
     }
   }

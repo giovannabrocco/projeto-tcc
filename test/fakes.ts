@@ -1,3 +1,4 @@
+import { falhar } from '../src/common/api-exception';
 import { Injectable } from '@nestjs/common';
 
 /** CEP -> coordenadas fixas (sem rede) */
@@ -46,10 +47,10 @@ export class MpFake {
     this.chamadas.push(`criar:${id}:${p.valor}`);
     return a;
   }
-  async obterAssinatura(id: string) { return this.assinaturas.get(id); }
+  async obterAssinatura(id: string) { const a = this.assinaturas.get(id); if (!a) falhar(404, 'não encontrada', { codigo: 'MP_NAO_ENCONTRADO' }); return a; }
   async atualizarValor(id: string, valor: number) { this.assinaturas.get(id).auto_recurring.transaction_amount = valor; this.chamadas.push(`valor:${id}:${valor}`); return this.assinaturas.get(id); }
   async cancelar(id: string) { this.assinaturas.get(id).status = 'cancelled'; this.chamadas.push(`cancelar:${id}`); return this.assinaturas.get(id); }
-  async obterPagamentoRecorrente(id: string) { return this.pagamentos.get(id); }
+  async obterPagamentoRecorrente(id: string) { const a = this.pagamentos.get(id); if (!a) falhar(404, 'não encontrada', { codigo: 'MP_NAO_ENCONTRADO' }); return a; }
   assinaturaWebhookValida() { return true; }
 
   // ---- ações do "cliente"

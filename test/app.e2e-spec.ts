@@ -583,6 +583,12 @@ describe('Conectus API (e2e)', () => {
       const s = await api().post('/api/assinatura/sincronizar').set(auth(S.admin2)).expect(200);
       expect(s.body.motivoBloqueio).toBe('TESTE_ENCERRADO');
     });
+    it('webhook com id que o MP não conhece (simulação do painel) responde 200 e registra o erro', async () => {
+      const r = await webhook('subscription_preapproval', '123456').expect(200);
+      expect(r.body.ignorado).toBe(true);
+      const ev = await prisma.evento_Pagamento.findFirst({ where: { mp_id: '123456' } });
+      expect(ev.erro).toBeTruthy();
+    });
     it('webhook: tipo desconhecido e ping sem dados não quebram; webhooks de assinatura de outra igreja são ignorados', async () => {
       await api().post('/api/pagamentos/webhook').send({}).expect(200);
       await webhook('payment', '123').expect(200);

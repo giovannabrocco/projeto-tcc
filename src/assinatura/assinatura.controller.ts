@@ -86,6 +86,8 @@ export class PagamentosController {
       await this.prisma.evento_Pagamento.update({ where: { id_evento: evento.id_evento }, data: { processado_em: new Date() } });
     } catch (e) {
       await this.prisma.evento_Pagamento.update({ where: { id_evento: evento.id_evento }, data: { erro: String((e as Error).message).slice(0, 500) } });
+      // id que o MP não conhece (ex.: simulação do painel): responder 200, reenviar não adianta
+      if ((e as any)?.getResponse?.()?.codigo === 'MP_NAO_ENCONTRADO') return { ok: true, ignorado: true };
       throw e; // 5xx => o Mercado Pago reenvia o webhook
     }
     return { ok: true };
