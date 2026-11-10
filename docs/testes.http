@@ -135,12 +135,13 @@ Content-Type: {{contentType}}
 { "nomeCelula": "x" }
 
 ### 17. Checkout Mercado Pago -> devolve initPoint (abra no navegador)
-# Use o e-mail de um COMPRADOR DE TESTE do Mercado Pago em emailPagador
+# emailPagador = e-mail do COMPRADOR DE TESTE do Mercado Pago. Formato: test_user_<NUMERO>@testuser.com,
+# onde <NUMERO> é o que vem depois de "TESTUSER" no nome de usuário do comprador (NÃO é o User ID).
 POST {{api}}/assinatura/checkout
 Authorization: Bearer {{token}}
 Content-Type: {{contentType}}
 
-{ "plano": "INTERMEDIARIO", "emailPagador": "comprador-de-teste@testuser.com" }
+{ "plano": "INTERMEDIARIO", "emailPagador": "test_user_NUMERO_DO_COMPRADOR@testuser.com" }
 
 ### 18. Depois de pagar no Mercado Pago -> atualiza o status (deve virar ATIVA)
 POST {{api}}/assinatura/sincronizar

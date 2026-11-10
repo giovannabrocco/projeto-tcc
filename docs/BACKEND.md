@@ -104,7 +104,7 @@ A ligação MP↔igreja é o `external_reference = igreja:{id}|plano:{ID}|cupom:
 ### Configuração
 1. https://www.mercadopago.com.br/developers/panel → crie uma aplicação → copie o **Access Token de teste** para `MP_ACCESS_TOKEN`.
 2. Em *Webhooks* cadastre `https://SUA-API/api/pagamentos/webhook` com os eventos **Planos e assinaturas** (assinatura e pagamento recorrente) e copie a *assinatura secreta* para `MP_WEBHOOK_SECRET`. Em dev use ngrok/cloudflared e preencha `MP_NOTIFICATION_URL`.
-3. Teste com **usuários de teste** do MP (vendedor e comprador). Em sandbox o e-mail do pagador (`emailPagador` no checkout) deve ser o do comprador de teste.
+3. Teste com **usuários de teste** do MP (vendedor e comprador). Em sandbox o e-mail do pagador (`emailPagador` no checkout) deve ser o do comprador de teste, no formato `test_user_<NUMERO>@testuser.com`, onde `<NUMERO>` é o que vem depois de `TESTUSER` no nome de usuário do comprador (não é o User ID). Usar o e-mail do vendedor ou um formato errado dá `User bad request` (400). O Access Token deve ser o do vendedor de teste.
 4. Cartões de teste: documentação "Cartões de teste" do MP.
 
 > ⚠️ **Não consegui testar contra o sandbox real do Mercado Pago** (sem acesso à rede/credenciais). A integração foi
