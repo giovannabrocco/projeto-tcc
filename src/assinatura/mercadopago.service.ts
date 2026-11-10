@@ -54,7 +54,8 @@ export class MercadoPagoService {
 
   /** O MP respondeu 404: o recurso não existe (ex.: id de teste do painel). Não adianta o MP reenviar. */
   private naoEncontrado(e: any, o_que: string) {
-    if (e?.response?.status === 404) {
+    // 404 (não existe) ou 400 (id inválido, como o "123456" do painel): reenviar o webhook não resolve
+    if ([400, 404].includes(e?.response?.status)) {
       this.logger.warn(`Mercado Pago não encontrou ${o_que} consultada.`);
       falhar(404, `O Mercado Pago não encontrou ${o_que}.`, { codigo: 'MP_NAO_ENCONTRADO' });
     }
